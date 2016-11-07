@@ -18,7 +18,7 @@ import com.groupon.sparklint.SparklintServer._
 import com.groupon.sparklint.common.Logging
 import com.groupon.sparklint.data.SparklintStateLike
 import org.apache.spark.groupon.{SparkListenerLogStartShim, StringToSparkEvent}
-import org.apache.spark.scheduler._
+import org.apache.spark.scheduler.{SparkListenerEvent, SparkListenerTaskEnd, _}
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -27,53 +27,53 @@ import scala.util.{Failure, Success, Try}
   * The FileEventSource uses a file to populate an internal buffer that can then be used as an EventSourceLike
   * implementation.
   *
-  * @author swhitear 
+  * @author swhitear
   * @since 8/18/16.
   */
 @throws[IllegalArgumentException]
 case class FileEventSource(fileSource: File, eventState: EventStateLike)
-  extends EventSourceBase(eventState)
-    with EventSourceLike with CanFreeScroll with Logging {
+  extends EventSourceBase(eventState) with FreeScrollEventSource with Logging {
 
-  // cache data to internal buffer and set initial state
-  private val buffer = new EventBuffer(fillBuffer())
-  primeState()
+  // important to declare this before the buffer is filled
+  private var extractedId: Option[String] = None
 
-  override def appId: String = eventState.getState.appId.getOrElse(fileSource.getName)
+  private val buffer  = new EventBuffer(fillBuffer())
+  private val fScroll = new ScrollHandler(buffer.next, eventState.onEvent, !buffer.hasNext, progress)
+  private val bScroll = new ScrollHandler(buffer.previous, eventState.unEvent, !buffer.hasPrevious, progress)
 
-  @throws[NoSuchElementException]
-  override def forward(count: Int = 1): EventSourceProgress = {
-    require(count > 0)
-    (0 until count).foreach(i => forward())
-    progress
-  }
+  override val appId: String = extractedId.getOrElse(fileSource.getName)
 
-  @throws[NoSuchElementException]
-  override def rewind(count: Int = 1): EventSourceProgress = {
-    require(count >= 0)
-    (0 until count).foreach(i => backward())
-    progress
-  }
+  @throws[IllegalArgumentException]
+  def forwardEvents(count: Int = 1) = fScroll.scroll(count)
 
-  @throws[NoSuchElementException]
-  override def end(): EventSourceProgress = {
-    while (progress.hasNext) forward()
-    progress
-  }
+  @throws[IllegalArgumentException]
+  def rewindEvents(count: Int = 1) = bScroll.scroll(count)
 
-  @throws[NoSuchElementException]
-  override def start(): EventSourceProgress = {
-    while (progress.hasPrevious) backward()
-    progress
-  }
+  @throws[IllegalArgumentException]
+  def forwardTasks(count: Int = 1) = fScroll.scroll(count, (evt) => evt.isInstanceOf[SparkListenerTaskEnd])
 
-  override def progress: EventSourceProgress = buffer.progress
+  @throws[IllegalArgumentException]
+  def rewindTasks(count: Int = 1) = bScroll.scroll(count, (evt) => evt.isInstanceOf[SparkListenerTaskStart])
+
+  @throws[IllegalArgumentException]
+  def forwardStages(count: Int = 1) = fScroll.scroll(count, (evt) => evt.isInstanceOf[SparkListenerStageCompleted])
+
+  @throws[IllegalArgumentException]
+  def rewindStages(count: Int = 1) = bScroll.scroll(count, (evt) => evt.isInstanceOf[SparkListenerStageSubmitted])
+
+  @throws[IllegalArgumentException]
+  def forwardJobs(count: Int = 1) = fScroll.scroll(count, (evt) => evt.isInstanceOf[SparkListenerJobEnd])
+
+  @throws[IllegalArgumentException]
+  def rewindJobs(count: Int = 1) = bScroll.scroll(count, (evt) => evt.isInstanceOf[SparkListenerJobStart])
+
+  override def toEnd(): EventSourceProgress = fScroll.scroll(Int.MaxValue)
+
+  override def toStart(): EventSourceProgress = bScroll.scroll(Int.MaxValue)
+
+  override def progress: EventSourceProgress = EventSourceProgress(buffer.eventCount, buffer.index)
 
   override def state: SparklintStateLike = eventState.getState
-
-  private def forward() = eventState.onEvent(buffer.next)
-
-  private def backward() = eventState.unEvent(buffer.previous)
 
   private def fillBuffer(): IndexedSeq[SparkListenerEvent] = {
     Try(Source.fromFile(fileSource)) match {
@@ -84,21 +84,13 @@ case class FileEventSource(fileSource: File, eventState: EventStateLike)
     }
   }
 
-  private def primeState() = {
-    // prime the state by loading the first message
-    if (buffer.hasNext) {
-      forward()
-      logInfo(s"Loaded and primed event source $fullName: ${buffer.progress} ")
-    } else {
-      logWarn(s"Empty buffer detected for event source id $appId")
-    }
-  }
-
   private def toStateOrBuffer(line: String): Option[SparkListenerEvent] = {
     StringToSparkEvent(line) match {
       case event: SparkListenerLogStartShim      => setVersionState(event)
       case event: SparkListenerBlockManagerAdded => setBlockManagerState(event)
       case event: SparkListenerEnvironmentUpdate => setEnvironmentState(event)
+      case event: SparkListenerApplicationStart  => setAppStartState(event)
+      case event: SparkListenerApplicationEnd    => setAppEndState(event)
       case default                               => Some(default)
     }
   }
@@ -120,6 +112,18 @@ case class FileEventSource(fileSource: File, eventState: EventStateLike)
     None // filter the event from the buffer
   }
 
+  private def setAppStartState(event: SparkListenerApplicationStart): Option[SparkListenerEvent] = {
+    extractedId = event.appId
+    appNameOpt = Some(event.appName)
+    userOpt = Some(event.sparkUser)
+    startTimeOpt = Some(event.time)
+    event // include the event in the buffer
+  }
+
+  private def setAppEndState(event: SparkListenerApplicationEnd): Option[SparkListenerEvent] = {
+    endTimeOpt = Some(event.time)
+    event // include the event in the buffer
+  }
 }
 
 object FileEventSource {
@@ -127,8 +131,8 @@ object FileEventSource {
     val eventSource = new FileEventSource(fileSource, new LosslessEventState())
     if (runImmediately) {
       logInfo(s"Auto playing event source ${eventSource.fullName}")
-      while (!eventSource.progress.atEnd) {
-        eventSource.forward()
+      while (eventSource.progress.hasNext) {
+        eventSource.forwardEvents()
       }
     }
     eventSource
@@ -141,3 +145,28 @@ object FileEventSource {
       None
   }
 }
+
+private class ScrollHandler(movefn: () => SparkListenerEvent,
+                            statefn: (SparkListenerEvent) => Unit,
+                            breaker: => Boolean,
+                            progress: => EventSourceProgress) {
+
+  @throws[scala.IllegalArgumentException]
+  def scroll(count: Int, decrementfn: (SparkListenerEvent) => Boolean = (evt) => true): EventSourceProgress = {
+    require(count >= 0)
+
+    var counter = count
+
+    def decrementIfMatch(event: SparkListenerEvent): SparkListenerEvent = {
+      if (decrementfn(event)) counter -= 1
+      event
+    }
+
+    while (counter > 0 && !breaker) {
+      statefn(decrementIfMatch(movefn()))
+    }
+
+    progress
+  }
+}
+

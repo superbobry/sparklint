@@ -16,7 +16,7 @@ import java.io.File
 
 import com.groupon.sparklint.TestUtils
 import com.groupon.sparklint.analyzer.SparklintStateAnalyzer
-import com.groupon.sparklint.events._
+import com.groupon.sparklint.events.{FreeScrollEventSource, _}
 import org.json4s.JObject
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -26,8 +26,8 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
   * @since 8/23/16.
   */
 class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
-  var evSource: EventSourceLike with CanFreeScroll = _
-  var evSourceManager: EventSourceManagerLike = new EventSourceManager()
+  var evSource       : EventSourceLike with FreeScrollEventSource = _
+  var evSourceManager: EventSourceManagerLike                     = new EventSourceManager()
 
   override protected def beforeEach(): Unit = {
     val evState = new CompressedEventState(30)
@@ -43,15 +43,14 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "appId" : "application_1462781278026_205691",
         |  "currentCores" : 0,
         |  "runningTasks" : 0,
-        |  "lastUpdatedAt" : 1466087746466,
+        |  "lastUpdatedAt" : 0,
         |  "applicationLaunchedAt" : 1466087746466,
+        |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
         |    "percent" : 0,
-        |    "description" : "1 / 426 (0%)",
-        |    "at_start" : false,
-        |    "at_end" : false,
+        |    "description" : "0 / 426 (0%)",
         |    "has_next" : true,
-        |    "has_previous" : true
+        |    "has_previous" : false
         |  }
         |}""".stripMargin
   }
@@ -64,22 +63,14 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
-        |  "allocatedCores" : 2,
-        |  "executors" : [ {
-        |    "executorId" : "2",
-        |    "cores" : 2,
-        |    "start" : 1466087808972
-        |  } ],
         |  "currentCores" : 0,
         |  "runningTasks" : 0,
-        |  "maxAllocatedCores" : 0,
-        |  "lastUpdatedAt" : 1466087808972,
+        |  "lastUpdatedAt" : 1466087746466,
         |  "applicationLaunchedAt" : 1466087746466,
+        |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
         |    "percent" : 0,
-        |    "description" : "2 / 426 (0%)",
-        |    "at_start" : false,
-        |    "at_end" : false,
+        |    "description" : "1 / 426 (0%)",
         |    "has_next" : true,
         |    "has_previous" : true
         |  }
@@ -88,7 +79,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "return limited information after first task was submitted" in {
 
-    TestUtils.replay(evSource, count = 5)
+    TestUtils.replay(evSource, count = 6)
 
     pretty(reportEventSource(evSource)) shouldBe
       """{
@@ -119,16 +110,23 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |    } ]
         |  } ],
         |  "timeUntilFirstTask" : 102096,
-        |  "timeSeriesCoreUsage" : [ ],
+        |  "timeSeriesCoreUsage" : [ {
+        |    "time" : 1466087848562,
+        |    "idle" : 0.51048,
+        |    "any" : 0.0,
+        |    "processLocal" : 0.0,
+        |    "nodeLocal" : 0.0,
+        |    "rackLocal" : 0.0,
+        |    "noPref" : 0.0
+        |  } ],
         |  "maxAllocatedCores" : 4,
         |  "coreUtilizationPercentage" : 0.0,
         |  "lastUpdatedAt" : 1466087848562,
         |  "applicationLaunchedAt" : 1466087746466,
+        |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
         |    "percent" : 1,
         |    "description" : "6 / 426 (1%)",
-        |    "at_start" : false,
-        |    "at_end" : false,
         |    "has_next" : true,
         |    "has_previous" : true
         |  }
@@ -137,7 +135,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "return full information after first task was finished" in {
 
-    TestUtils.replay(evSource, count = 10)
+    TestUtils.replay(evSource, count = 11)
 
     pretty(reportEventSource(evSource)) shouldBe
       """{
@@ -197,84 +195,86 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "timeUntilFirstTask" : 102096,
         |  "timeSeriesCoreUsage" : [ {
         |    "time" : 1466087848500,
-        |    "idle" : 1.2952,
+        |    "idle" : 0.4192,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 0.846,
+        |    "nodeLocal" : 1.722,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087849000,
-        |    "idle" : 1.1412,
+        |    "idle" : 0.1412,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 1.0,
+        |    "nodeLocal" : 2.0,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087849500,
-        |    "idle" : 1.1412,
+        |    "idle" : 0.1412,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 1.0,
+        |    "nodeLocal" : 2.0,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087850000,
-        |    "idle" : -0.8588,
+        |    "idle" : -1.8588,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 1.0,
+        |    "nodeLocal" : 2.0,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087850500,
-        |    "idle" : -0.8588,
+        |    "idle" : -1.8588,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 1.0,
+        |    "nodeLocal" : 2.0,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087851000,
-        |    "idle" : -0.8588,
+        |    "idle" : -1.8588,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 1.0,
+        |    "nodeLocal" : 2.0,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087851500,
-        |    "idle" : -0.8588,
+        |    "idle" : -1.8588,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 1.0,
+        |    "nodeLocal" : 2.0,
         |    "rackLocal" : 0.0,
         |    "noPref" : 0.0
         |  }, {
         |    "time" : 1466087852000,
-        |    "idle" : -0.0948,
+        |    "idle" : -0.5588,
         |    "any" : 0.0,
         |    "processLocal" : 0.0,
-        |    "nodeLocal" : 0.236,
-        |    "rackLocal" : 0.0,
+        |    "nodeLocal" : 0.472,
+        |    "rackLocal" : 0.228,
         |    "noPref" : 0.0
         |  } ],
         |  "cumulativeCoreUsage" : [ {
-        |    "cores" : 1,
-        |    "duration" : 3542
+        |    "cores" : 2,
+        |    "duration" : 3438
+        |  }, {
+        |    "cores" : 3,
+        |    "duration" : 119
         |  } ],
-        |  "maxConcurrentTasks" : 1,
+        |  "maxConcurrentTasks" : 3,
         |  "maxAllocatedCores" : 4,
-        |  "maxCoreUsage" : 1,
-        |  "coreUtilizationPercentage" : 0.9933236086175945,
+        |  "maxCoreUsage" : 3,
+        |  "coreUtilizationPercentage" : 2.0228343806104134,
         |  "lastUpdatedAt" : 1466087852118,
         |  "applicationLaunchedAt" : 1466087746466,
+        |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
         |    "percent" : 3,
         |    "description" : "11 / 426 (3%)",
-        |    "at_start" : false,
-        |    "at_end" : false,
         |    "has_next" : true,
         |    "has_previous" : true
         |  }
@@ -284,7 +284,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "return full information after all event was replayed" in {
 
     TestUtils.replay(evSource)
-
+    
     pretty(reportEventSource(evSource)) shouldBe
       """{
         |  "appName" : "MyAppName",
@@ -507,8 +507,6 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "progress" : {
         |    "percent" : 100,
         |    "description" : "426 / 426 (100%)",
-        |    "at_start" : false,
-        |    "at_end" : true,
         |    "has_next" : false,
         |    "has_previous" : true
         |  }
@@ -516,6 +514,6 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   private def reportEventSource(evSource: EventSourceLike): JObject = {
-    UIServer.reportJson(SparklintStateAnalyzer(evSource.state), evSource.progress)
+    UIServer.reportJson(SparklintStateAnalyzer(evSource), evSource)
   }
 }

@@ -66,7 +66,7 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
   def navbarItem(app: EventSourceLike): Seq[Node] =
     <li data-value={app.appId}>
       <a href="#" class="sparklintApp" data-value={app.appId}>
-        <strong>App:</strong>{app.trimmedId}
+        <strong>App: </strong>{app.nameOrId}
         <p class="text-center" id={uniqueId(app.appId, "app-prog")}>
         {app.progress.description}
       </p>
@@ -82,41 +82,41 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
 
   def navbarReplayControl: Seq[Node] =
     <li class="sidebar-search">
-    <div class="input-group custom-search-form disabled" id="replay-controls" style="display:None">
-      <!--<form role="form"><fieldset disabled="true">-->
-      <div class="input-group-btn">
-        <button type="button" class="btn btn-default" title="Start" id="eventsToStart">
-          <i class="fa fa-fast-backward"></i>
-        </button>
-        <button type="button" class="btn btn-default" title="Back" id="eventsBackward">
-          <i class="fa fa-step-backward"></i>
-        </button>
+      <div class="input-group custom-search-form disabled" id="replay-controls" style="display:None">
+        <!--<form role="form"><fieldset disabled="true">-->
+        <div class="input-group-btn">
+          <button type="button" class="btn btn-default" title="Start" id="eventsToStart">
+            <i class="fa fa-fast-backward"></i>
+          </button>
+          <button type="button" class="btn btn-default" title="Back" id="eventsBackward">
+            <i class="fa fa-step-backward"></i>
+          </button>
+        </div>
+        <select class="form-control" id="countSelector">
+          <option>1</option>
+          <option>5</option>
+          <option>10</option>
+          <option>25</option>
+          <option>50</option>
+          <option>100</option>
+          <option>250</option>
+          <option>1000</option>
+        </select>
+        <select class="form-control" id="typeSelector">
+          {for (navType <- UIServer.supportedNavTypes) yield
+          <option>{navType}</option>
+          }
+        </select>
+        <div class="input-group-btn">
+          <button type="button" class="btn btn-default" title="Forward" id="eventsForward">
+            <i class="fa fa-step-forward"></i>
+          </button>
+          <button type="button" class="btn btn-default" title="End" id="eventsToEnd">
+            <i class="fa fa-fast-forward"></i>
+          </button>
+        </div>
       </div>
-      <select class="form-control" id="countSelector">
-        <option>1</option>
-        <option>5</option>
-        <option>10</option>
-        <option>25</option>
-        <option>50</option>
-        <option>100</option>
-        <option>250</option>
-        <option>1000</option>
-      </select>
-      <select class="form-control" id="typeSelector">
-        <option>Events</option>
-        <!--<option>Tasks</option>
-                    <option>Stages</option>-->
-      </select>
-      <div class="input-group-btn">
-        <button type="button" class="btn btn-default" title="Forward" id="eventsForward">
-          <i class="fa fa-step-forward"></i>
-        </button>
-        <button type="button" class="btn btn-default" title="End" id="eventsToEnd">
-          <i class="fa fa-fast-forward"></i>
-        </button>
-      </div>
-    </div>
-  </li>
+    </li>
 
   def mainContainer: Seq[Node] =
     <div class="container-fluid">
@@ -137,12 +137,17 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
             </div>
           </div>
         </div>
-      </div>{summaryRow}<div class="row">
-      <div class="col-lg-12">
-        {coreUsageTimeSeries}{coreUsageDistribution}{taskDistributionList}
+      </div>
+      {summaryRow}
+      <div class="row">
+        <div class="col-lg-12">
+          {coreUsageTimeSeries}{coreUsageDistribution}{taskDistributionList}
+        </div>
       </div>
     </div>
+    <div class="loading-spinner">
     </div>
+
 
   def summaryRow: Seq[Node] =
     <div id="summaryRow" class="row" style="display:None">

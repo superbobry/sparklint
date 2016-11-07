@@ -74,13 +74,14 @@ class CompressedMetricsSink(override val resolution: Long,
         newStorage(endBucket) += (endTime % newResolution) * weight
       }
     })
-    new CompressedMetricsSink(newResolution, Some(dataRange.fold(inputInterval)(_.merge(inputInterval))), origin, newStorage.toArray)
+    val newDataRange = Some(dataRange.fold(inputInterval)(_.merge(inputInterval)))
+    new CompressedMetricsSink(newResolution, newDataRange, origin, newStorage.toArray)
   }
 
-  def addUsage(startTime: Long, endTime: Long, weight: Int = 1): CompressedMetricsSink =
+  override def addUsage(startTime: Long, endTime: Long, weight: Int = 1): CompressedMetricsSink =
     batchAddUsage(Seq(startTime -> endTime), weight)
 
-  def removeUsage(startTime: Long, endTime: Long, weight: Int = 1): CompressedMetricsSink =
+  override def removeUsage(startTime: Long, endTime: Long, weight: Int = 1): CompressedMetricsSink =
     batchAddUsage(Seq(startTime -> endTime), -weight)
 
   def changeResolution(toResolution: Long): CompressedMetricsSink = {
