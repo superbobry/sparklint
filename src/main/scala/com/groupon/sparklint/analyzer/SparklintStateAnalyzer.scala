@@ -1,20 +1,23 @@
 /*
- Copyright 2016 Groupon, Inc.
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
- http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-*/
+ * Copyright 2016 Groupon, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.groupon.sparklint.analyzer
 
 import com.groupon.sparklint.data._
-import com.groupon.sparklint.data.compressed._
-import com.groupon.sparklint.events.EventSourceLike
+import com.groupon.sparklint.events.{EventSourceMetaLike, EventStateManagerLike}
 import org.apache.spark.scheduler.TaskLocality
 import org.apache.spark.scheduler.TaskLocality._
 
@@ -26,11 +29,12 @@ import scala.util.Try
   *
   * @author rxue
   * @since 9/23/16.
-  * @param state the state to analyze
+  * @param source       the source to analyze
+  * @param stateManager the state to analyze
   */
-case class SparklintStateAnalyzer(eventSource: EventSourceLike) extends SparklintAnalyzerLike {
-
-  val state = eventSource.state
+class SparklintStateAnalyzer(val source: EventSourceMetaLike, val stateManager: EventStateManagerLike)
+  extends SparklintAnalyzerLike {
+  val state: SparklintStateLike = stateManager.getState
 
   override lazy val getCurrentCores: Option[Int] = getRunningTasks
 
@@ -51,7 +55,7 @@ case class SparklintStateAnalyzer(eventSource: EventSourceLike) extends Sparklin
   }
 
   override lazy val getTimeUntilFirstTask: Option[Long] = Try {
-    state.firstTaskAt.get - eventSource.startTime
+    state.firstTaskAt.get - source.startTime
   }.toOption
 
   override lazy val getCoreUtilizationPercentage: Option[Double] = {
@@ -83,7 +87,7 @@ case class SparklintStateAnalyzer(eventSource: EventSourceLike) extends Sparklin
 
   override lazy val getLastUpdatedAt: Option[Long] = Some(state.lastUpdatedAt)
 
-  override def getLocalityStatsByStageIdentifier(stageIdentifier: StageIdentifier): Option[SparklintStageMetrics] = {
+  override def getLocalityStatsByStageIdentifier(stageIdentifier: SparklintStageIdentifier): Option[SparklintStageMetrics] = {
     state.stageMetrics.get(stageIdentifier)
   }
 
@@ -136,7 +140,7 @@ case class SparklintStateAnalyzer(eventSource: EventSourceLike) extends Sparklin
     * @return the metricsSink that stores the number of CPU millis allocated for each interval
     */
   private[analyzer] def getAllocatedCores(numBuckets: Int): MetricsSink = {
-    var sink = CompressedMetricsSink.empty(eventSource.startTime, numBuckets)
+    var sink = CompressedMetricsSink.empty(source.startTime, numBuckets)
     state.executorInfo.values.foreach(executorInfo => {
       sink = sink.addUsage(executorInfo.startTime, executorInfo.endTime.getOrElse(state.lastUpdatedAt), executorInfo.cores)
     })
@@ -153,7 +157,7 @@ case class SparklintStateAnalyzer(eventSource: EventSourceLike) extends Sparklin
     } else {
       var toReturn = state.coreUsage
       state.runningTasks.values.foreach(runningTask => {
-        val locality = TaskLocality.withName(runningTask.locality)
+        val locality = TaskLocality.withName(runningTask.locality.name)
         toReturn = toReturn.updated(locality, toReturn(locality).addUsage(runningTask.launchTime, state.lastUpdatedAt))
       })
       toReturn

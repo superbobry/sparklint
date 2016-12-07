@@ -1,18 +1,22 @@
 /*
- Copyright 2016 Groupon, Inc.
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
- http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-*/
+ * Copyright 2016 Groupon, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.groupon.sparklint.ui
 
-import com.groupon.sparklint.events.{EventSourceLike, EventSourceManagerLike, EventSourceProgress}
+import com.groupon.sparklint.events._
 
 import scala.xml.Node
 
@@ -56,24 +60,25 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
       <div class="navbar-default sidebar" role="navigation">
         <div class="sidebar-nav navbar-collapse">
           <ul class="nav" id="side-menu">
-            {for (app <- sourceManager.eventSources) yield navbarItem(app)}
+            {for (source <- sourceManager.eventSourceDetails)
+            yield navbarItem(source.eventSourceId, source.meta, source.progress)}
             {navbarReplayControl}
           </ul>
         </div>
       </div>
     </nav>
 
-  def navbarItem(app: EventSourceLike): Seq[Node] =
-    <li data-value={app.appId}>
-      <a href="#" class="sparklintApp" data-value={app.appId}>
-        <strong>App: </strong>{app.nameOrId}
-        <p class="text-center" id={uniqueId(app.appId, "app-prog")}>
-        {app.progress.description}
+  def navbarItem(esId: String, meta: EventSourceMetaLike, progress: EventProgressTrackerLike): Seq[Node] =
+    <li data-value={esId}>
+      <a href="#" class="sparklintApp" data-value={esId}>
+        <strong>App: </strong>{meta.nameOrId}
+        <p class="text-center" id={uniqueId(esId, "app-prog")}>
+        {progress.eventProgress.description}
       </p>
         <div class="progress active">
-          <div class="progress-bar" role="progressbar" id={uniqueId(app.appId, "progress-bar")}
-               aria-valuenow={app.progress.percent.toString} aria-valuemin="0" aria-valuemax="100"
-               style={widthStyle(app.progress)}>
+          <div class="progress-bar" role="progressbar" id={uniqueId(esId, "progress-bar")}
+               aria-valuenow={progress.eventProgress.percent.toString} aria-valuemin="0" aria-valuemax="100"
+               style={widthStyle(progress.eventProgress)}>
           </div>
         </div>
       </a>
@@ -103,7 +108,7 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
           <option>1000</option>
         </select>
         <select class="form-control" id="typeSelector">
-          {for (navType <- UIServer.supportedNavTypes) yield
+          {for (navType <- EventType.ALL_TYPES) yield
           <option>{navType}</option>
           }
         </select>
@@ -121,18 +126,23 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
   def mainContainer: Seq[Node] =
     <div class="container-fluid">
       <div class="row">
-        <div class="col-lg-12">
+        <div class="col-md-12">
+          <div class="alert alert-danger" id="error-message">
+          </div>
+        </div>
+        <div class="col-md-12">
           <h1 class="page-header">
             <span id="appName">Sparklint</span>
             <small id="appId">Select an app from left side</small>
           </h1>
         </div>
-        <div class="col-lg-12">
+        <div class="col-md-12">
           <div class="alert alert-success" id="summaryApplicationEndedAlert">
             <span id="summaryApplicationDuration"></span>
           </div>
           <div class="progress">
-            <div id="summaryApplicationProgress" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+            <div id="summaryApplicationProgress" class="progress-bar" role="progressbar"
+                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
               <span class="sr-only"></span>
             </div>
           </div>
@@ -147,7 +157,6 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
     </div>
     <div class="loading-spinner">
     </div>
-
 
   def summaryRow: Seq[Node] =
     <div id="summaryRow" class="row" style="display:None">
@@ -288,7 +297,7 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
       <!-- /.panel-body -->
     </div>
 
-  private def widthStyle(esp: EventSourceProgress) = s"width: ${esp.percent}%"
+  private def widthStyle(esp: EventProgress) = s"width: ${esp.percent}%"
 
   private def uniqueId(appId: String, idType: String) = s"$appId-$idType"
 }

@@ -14,10 +14,10 @@ package com.groupon.sparklint.ui
 
 import java.io.File
 
-import com.groupon.sparklint.TestUtils
-import com.groupon.sparklint.analyzer.SparklintStateAnalyzer
-import com.groupon.sparklint.events.{FreeScrollEventSource, _}
-import org.json4s.JObject
+import com.groupon.sparklint.common.TestUtils
+import com.groupon.sparklint.events.{CompressedStateManager, FileEventSourceManager}
+import org.http4s.client.blaze.PooledHttp1Client
+import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -26,18 +26,27 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
   * @since 8/23/16.
   */
 class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
-  var evSource       : EventSourceLike with FreeScrollEventSource = _
-  var evSourceManager: EventSourceManagerLike                     = new EventSourceManager()
+
+  var evSourceManager: FileEventSourceManager = _
+  var server         : UIServer               = _
 
   override protected def beforeEach(): Unit = {
-    val evState = new CompressedEventState(30)
     val file = new File(TestUtils.resource("spark_event_log_example"))
-    evSource = new FileEventSource(file, evState)
-    evSourceManager.addEventSource(evSource)
+    evSourceManager = new FileEventSourceManager() {
+      override def newStateManager = new CompressedStateManager(30)
+    }
+
+    evSourceManager.addFile(file)
+    server = new UIServer(evSourceManager)
+    server.startServer(Some(42424))
+  }
+
+  override protected def afterEach(): Unit = {
+    server.stopServer()
   }
 
   it should "return limited information when most of the information are not available" in {
-    pretty(reportEventSource(evSource)) shouldBe
+    pretty(state) shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -48,7 +57,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
         |    "percent" : 0,
-        |    "description" : "0 / 426 (0%)",
+        |    "description" : "Completed 0 / 431 (0%) with 0 active.",
         |    "has_next" : true,
         |    "has_previous" : false
         |  }
@@ -57,9 +66,9 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "return limited information after application was submitted" in {
 
-    TestUtils.replay(evSource, count = 1)
+    forward(4)
 
-    pretty(reportEventSource(evSource)) shouldBe
+    pretty(state) shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -69,8 +78,8 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
-        |    "percent" : 0,
-        |    "description" : "1 / 426 (0%)",
+        |    "percent" : 1,
+        |    "description" : "Completed 4 / 431 (1%) with 0 active.",
         |    "has_next" : true,
         |    "has_previous" : true
         |  }
@@ -79,9 +88,9 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "return limited information after first task was submitted" in {
 
-    TestUtils.replay(evSource, count = 6)
+    forward(11)
 
-    pretty(reportEventSource(evSource)) shouldBe
+    pretty(state) shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -125,8 +134,8 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
-        |    "percent" : 1,
-        |    "description" : "6 / 426 (1%)",
+        |    "percent" : 3,
+        |    "description" : "Completed 11 / 431 (3%) with 0 active.",
         |    "has_next" : true,
         |    "has_previous" : true
         |  }
@@ -135,9 +144,9 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "return full information after first task was finished" in {
 
-    TestUtils.replay(evSource, count = 11)
+    forward(16)
 
-    pretty(reportEventSource(evSource)) shouldBe
+    pretty(state) shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -273,8 +282,8 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
-        |    "percent" : 3,
-        |    "description" : "11 / 426 (3%)",
+        |    "percent" : 4,
+        |    "description" : "Completed 16 / 431 (4%) with 0 active.",
         |    "has_next" : true,
         |    "has_previous" : true
         |  }
@@ -283,9 +292,9 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "return full information after all event was replayed" in {
 
-    TestUtils.replay(evSource)
-    
-    pretty(reportEventSource(evSource)) shouldBe
+    end
+
+    pretty(state) shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -506,14 +515,41 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "applicationEndedAt" : 1466088058982,
         |  "progress" : {
         |    "percent" : 100,
-        |    "description" : "426 / 426 (100%)",
+        |    "description" : "Completed 431 / 431 (100%) with 0 active.",
         |    "has_next" : false,
         |    "has_previous" : true
         |  }
         |}""".stripMargin
   }
 
-  private def reportEventSource(evSource: EventSourceLike): JObject = {
-    UIServer.reportJson(SparklintStateAnalyzer(evSource), evSource)
+  private def state: JValue = {
+    parse(request(stateUrl))
+  }
+
+  private def forward(count: Int): String = {
+    request(forwardUrl(count))
+  }
+
+  private def end: String = {
+    request(endUrl)
+  }
+
+  private def forwardUrl(count: Int) = {
+    s"http://localhost:42424/spark_event_log_example/forward/$count/Events"
+  }
+
+  private def endUrl = {
+    s"http://localhost:42424/spark_event_log_example/to_end"
+  }
+
+  private def stateUrl = {
+    s"http://localhost:42424/spark_event_log_example/state"
+  }
+
+  private def request(url: String): String = {
+    val client = PooledHttp1Client()
+    val response = client.getAs[String](url).run
+    client.shutdown.run
+    response
   }
 }
