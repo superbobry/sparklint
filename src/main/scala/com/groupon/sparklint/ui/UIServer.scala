@@ -20,8 +20,8 @@ import com.groupon.sparklint.analyzer.SparklintStateAnalyzer
 import com.groupon.sparklint.common.Logging
 import com.groupon.sparklint.events._
 import com.groupon.sparklint.server.{AdhocServer, StaticFileService}
-import org.http4s.{HttpService, Response}
 import org.http4s.dsl._
+import org.http4s.{HttpService, Response}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{DefaultFormats, Extraction, JObject}
@@ -85,6 +85,7 @@ class UIServer(esManager: EventSourceManagerLike)
 
   private def fwdApp(appId: String, count: String, evType: EventType): String = {
     def progress() = esManager.getSourceDetail(appId).progress
+
     val mover = moveEventSource(count, appId, progress) _
     val eventSource = esManager.getScrollingSource(appId)
     evType match {
@@ -101,6 +102,7 @@ class UIServer(esManager: EventSourceManagerLike)
 
   private def rwdApp(appId: String, count: String, evType: EventType): String = {
     def progress() = esManager.getSourceDetail(appId).progress
+
     val mover = moveEventSource(count, appId, progress) _
     val eventSource = esManager.getScrollingSource(appId)
     evType match {
@@ -188,6 +190,10 @@ object UIServer {
       ("maxAllocatedCores" -> report.getMaxAllocatedCores) ~
       ("maxCoreUsage" -> report.getMaxCoreUsage) ~
       ("coreUtilizationPercentage" -> report.getCoreUtilizationPercentage) ~
+      ("jobGroups" -> report.getStageIdentifiers.map(stageId => {
+        ("jobGroup" -> stageId.group.name) ~
+          ("jobDescription" -> stageId.description.name)
+      })) ~
       ("lastUpdatedAt" -> report.getLastUpdatedAt) ~
       ("applicationLaunchedAt" -> source.startTime) ~
       ("applicationEndedAt" -> source.endTime) ~

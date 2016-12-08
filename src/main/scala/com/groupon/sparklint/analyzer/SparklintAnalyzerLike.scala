@@ -106,6 +106,13 @@ trait SparklintAnalyzerLike {
 
   // App lifetime locality stats
   /**
+    * Get all stage identifiers
+    *
+    * @return
+    */
+  def getStageIdentifiers: Seq[JobGroupAndDescription]
+
+  /**
     * @param stageIdentifier the identifier for a series of stages
     * @return for each locality level, the cumulative task metrics for that locality level
     */

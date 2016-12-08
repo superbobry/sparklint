@@ -87,6 +87,10 @@ class SparklintStateAnalyzer(val source: EventSourceMetaLike, val stateManager: 
 
   override lazy val getLastUpdatedAt: Option[Long] = Some(state.lastUpdatedAt)
 
+  override def getStageIdentifiers: Seq[JobGroupAndDescription] = state.stageMetrics.keys.toSeq.map(stageId => {
+    JobGroupAndDescription(stageId.group, stageId.description)
+  }).distinct
+
   override def getLocalityStatsByStageIdentifier(stageIdentifier: SparklintStageIdentifier): Option[SparklintStageMetrics] = {
     state.stageMetrics.get(stageIdentifier)
   }

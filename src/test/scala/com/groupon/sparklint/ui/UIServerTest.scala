@@ -52,6 +52,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "appId" : "application_1462781278026_205691",
         |  "currentCores" : 0,
         |  "runningTasks" : 0,
+        |  "jobGroups" : [ ],
         |  "lastUpdatedAt" : 0,
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
@@ -74,6 +75,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "appId" : "application_1462781278026_205691",
         |  "currentCores" : 0,
         |  "runningTasks" : 0,
+        |  "jobGroups" : [ ],
         |  "lastUpdatedAt" : 1466087746466,
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
@@ -130,6 +132,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  } ],
         |  "maxAllocatedCores" : 4,
         |  "coreUtilizationPercentage" : 0.0,
+        |  "jobGroups" : [ ],
         |  "lastUpdatedAt" : 1466087848562,
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
@@ -278,6 +281,10 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "maxAllocatedCores" : 4,
         |  "maxCoreUsage" : 3,
         |  "coreUtilizationPercentage" : 2.0228343806104134,
+        |  "jobGroups" : [ {
+        |    "jobGroup" : "myJobGroup",
+        |    "jobDescription" : "myJobDescription"
+        |  } ],
         |  "lastUpdatedAt" : 1466087852118,
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
@@ -510,6 +517,10 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  "maxAllocatedCores" : 6,
         |  "maxCoreUsage" : 4,
         |  "coreUtilizationPercentage" : 0.5881725797287303,
+        |  "jobGroups" : [ {
+        |    "jobGroup" : "myJobGroup",
+        |    "jobDescription" : "myJobDescription"
+        |  } ],
         |  "lastUpdatedAt" : 1466088058982,
         |  "applicationLaunchedAt" : 1466087746466,
         |  "applicationEndedAt" : 1466088058982,
