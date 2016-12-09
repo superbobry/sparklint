@@ -48,6 +48,7 @@ trait UITemplate {
       <link rel="stylesheet" type="text/css" href="/static/css/sb-admin-2.min.css"/>
       <link rel="stylesheet" type="text/css" href="/static/font-awesome/css/font-awesome.min.css"/>
       <link rel="stylesheet" type="text/css" href="/static/css/morris.css"/>
+      <link rel="stylesheet" type="text/css" href="/static/css/nv.d3.min.css"/>
       <link rel="stylesheet" type="text/css" href="/static/css/metismenu.min.css"/>{extraCSS}
     </head>
     <body>
@@ -57,6 +58,8 @@ trait UITemplate {
       <script src="/static/js/morris.min.js"></script>
       <script src="/static/js/sb-admin-2.min.js"></script>
       <script src="/static/js/moment.min.js"></script>
+      <script src="/static/js/d3.v3.min.js"></script>
+      <script src="/static/js/nv.d3.min.js"></script>
       <script src="/static/js/metismenu.min.js"></script>
       <script src="/static/js/underscore.min.js"></script>{extraScripts}
     </body>
