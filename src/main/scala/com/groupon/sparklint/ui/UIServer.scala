@@ -18,8 +18,10 @@ package com.groupon.sparklint.ui
 
 import com.groupon.sparklint.analyzer.SparklintStateAnalyzer
 import com.groupon.sparklint.common.Logging
+import com.groupon.sparklint.data.{SparklintStageIdentifier, SparklintStageMetrics, SparklintTaskCounter}
 import com.groupon.sparklint.events._
 import com.groupon.sparklint.server.{AdhocServer, StaticFileService}
+import org.apache.spark.util.StatCounter
 import org.http4s.dsl._
 import org.http4s.{HttpService, Response}
 import org.json4s.JsonDSL._
@@ -39,14 +41,21 @@ class UIServer(esManager: EventSourceManagerLike)
 
   routingMap("/") = sparklintService
 
+  object JobDescriptionMatcher extends OptionalQueryParamDecoderMatcher[String]("jobDescription")
+
+  object JobGroupMatcher extends OptionalQueryParamDecoderMatcher[String]("jobGroup")
+
+
   private def sparklintService = HttpService {
-    case GET -> Root                                                            => tryit(homepage, htmlResponse)
-    case GET -> Root / appId / "state" if appExists(appId)                      => tryit(state(appId))
-    case GET -> Root / appId / "eventSource" if appExists(appId)                => tryit(eventSource(appId))
-    case GET -> Root / appId / "forward" / count / evString if appExists(appId) => tryit(fwdApp(appId, count, evString))
-    case GET -> Root / appId / "rewind" / count / evString if appExists(appId)  => tryit(rwdApp(appId, count, evString))
-    case GET -> Root / appId / "to_end" if appExists(appId)                     => tryit(endApp(appId))
-    case GET -> Root / appId / "to_start" if appExists(appId)                   => tryit(startApp(appId))
+    case GET -> Root                                                                    => tryit(homepage, htmlResponse)
+    case GET -> Root / appId / "state" if appExists(appId)                              => tryit(state(appId))
+    case GET -> Root / appId / "stageMetrics" :? JobDescriptionMatcher(jd) +& JobGroupMatcher(jg)
+      if appExists(appId)                                                               => tryit(stageMetrics(appId, jg, jd))
+    case GET -> Root / appId / "eventSource" if appExists(appId)                        => tryit(eventSource(appId))
+    case GET -> Root / appId / "forward" / IntVar(count) / evString if appExists(appId) => tryit(fwdApp(appId, count, evString))
+    case GET -> Root / appId / "rewind" / IntVar(count) / evString if appExists(appId)  => tryit(rwdApp(appId, count, evString))
+    case GET -> Root / appId / "to_end" if appExists(appId)                             => tryit(endApp(appId))
+    case GET -> Root / appId / "to_start" if appExists(appId)                           => tryit(startApp(appId))
   }
 
   private def tryit(exec: => String,
@@ -75,15 +84,24 @@ class UIServer(esManager: EventSourceManagerLike)
     pretty(UIServer.reportJson(report, detail.progress))
   }
 
+  private def stageMetrics(appId: String, jobGroup: Option[String], jobDescription: Option[String]): String = {
+    val detail = esManager.getSourceDetail(appId)
+    val metrics: Map[SparklintStageIdentifier, SparklintStageMetrics] = detail.state.getState.stageMetrics.filterKeys(r => {
+      (jobGroup.isEmpty || jobGroup.exists(_ == r.group.name)) &&
+        (jobDescription.isEmpty || jobDescription.exists(_ == r.description.name))
+    })
+    pretty(UIServer.stageMetricsJson(metrics))
+  }
+
   private def eventSource(appId: String): String = {
     pretty(UIServer.progressJson(esManager.getSourceDetail(appId).progress))
   }
 
-  private def fwdApp(appId: String, count: String, evString: String): String = {
+  private def fwdApp(appId: String, count: Int, evString: String): String = {
     fwdApp(appId, count, EventType.fromString(evString))
   }
 
-  private def fwdApp(appId: String, count: String, evType: EventType): String = {
+  private def fwdApp(appId: String, count: Int, evType: EventType): String = {
     def progress() = esManager.getSourceDetail(appId).progress
 
     val mover = moveEventSource(count, appId, progress) _
@@ -96,11 +114,11 @@ class UIServer(esManager: EventSourceManagerLike)
     }
   }
 
-  private def rwdApp(appId: String, count: String, evString: String): String = {
+  private def rwdApp(appId: String, count: Int, evString: String): String = {
     rwdApp(appId, count, EventType.fromString(evString))
   }
 
-  private def rwdApp(appId: String, count: String, evType: EventType): String = {
+  private def rwdApp(appId: String, count: Int, evType: EventType): String = {
     def progress() = esManager.getSourceDetail(appId).progress
 
     val mover = moveEventSource(count, appId, progress) _
@@ -125,15 +143,10 @@ class UIServer(esManager: EventSourceManagerLike)
       () => esManager.getSourceDetail(appId).progress)
   }
 
-  private def moveEventSource(count: String, appId: String, progFn: () => EventProgressTrackerLike)
+  private def moveEventSource(count: Int, appId: String, progFn: () => EventProgressTrackerLike)
                              (moveFn: (Int) => Unit): String = {
-    Try(moveFn(count.toInt)) match {
-      case Success(progress) =>
-        pretty(UIServer.progressJson(progFn()))
-      case Failure(ex)       =>
-        logError(s"Failure to move appId $appId: ${ex.getMessage}")
-        eventSource(appId)
-    }
+    moveFn(count)
+    pretty(UIServer.progressJson(progFn()))
   }
 
   private def endOfEventSource(appId: String,
@@ -198,6 +211,59 @@ object UIServer {
       ("applicationLaunchedAt" -> source.startTime) ~
       ("applicationEndedAt" -> source.endTime) ~
       ("progress" -> progressJson(progress))
+  }
+
+  def stageMetricsJson(stageMetrics: Map[SparklintStageIdentifier, SparklintStageMetrics]): JObject = {
+    "stageMetrics" -> stageMetrics.map({
+      case (stageId, metrics) =>
+        ("jobGroup" -> stageId.group) ~
+          ("jobDescription" -> stageId.description) ~
+          ("stageName" -> stageId.name) ~
+          ("stageMetrics" -> metrics.metricsRepo.map({ case ((locality, taskType), taskMetrics) =>
+            ("locality" -> locality.toString) ~
+              ("taskType" -> taskType.name) ~
+              ("taskMetrics" -> taskMetricsJson(taskMetrics))
+          }))
+    })
+  }
+
+  def taskMetricsJson(taskMetricsCounter: SparklintTaskCounter): JObject = {
+    ("inputMetrics" -> (
+      ("bytesRead" -> statCounterJson(taskMetricsCounter.inputMetrics.bytesRead)) ~
+        ("recordsRead" -> statCounterJson(taskMetricsCounter.inputMetrics.recordsRead))
+      )) ~
+      ("outputMetrics" -> (
+        ("bytesWritten" -> statCounterJson(taskMetricsCounter.outputMetrics.bytesWritten)) ~
+          ("recordsWritten" -> statCounterJson(taskMetricsCounter.outputMetrics.recordsWritten))
+        )) ~
+      ("shuffleReadMetrics" -> (
+        ("fetchWaitTime" -> statCounterJson(taskMetricsCounter.shuffleReadMetrics.fetchWaitTime)) ~
+          ("localBlocksFetched" -> statCounterJson(taskMetricsCounter.shuffleReadMetrics.localBlocksFetched)) ~
+          ("localBytesRead" -> statCounterJson(taskMetricsCounter.shuffleReadMetrics.localBytesRead)) ~
+          ("recordsRead" -> statCounterJson(taskMetricsCounter.shuffleReadMetrics.recordsRead)) ~
+          ("remoteBlocksFetched" -> statCounterJson(taskMetricsCounter.shuffleReadMetrics.remoteBlocksFetched)) ~
+          ("remoteBytesRead" -> statCounterJson(taskMetricsCounter.shuffleReadMetrics.remoteBytesRead))
+        )) ~
+      ("shuffleWriteMetrics" -> (
+        ("shuffleBytesWritten" -> statCounterJson(taskMetricsCounter.shuffleWriteMetrics.shuffleBytesWritten)) ~
+          ("shuffleRecordsWritten" -> statCounterJson(taskMetricsCounter.shuffleWriteMetrics.shuffleRecordsWritten)) ~
+          ("shuffleWriteTime" -> statCounterJson(taskMetricsCounter.shuffleWriteMetrics.shuffleWriteTime))
+        )) ~
+      ("diskBytesSpilled" -> statCounterJson(taskMetricsCounter.diskBytesSpilled)) ~
+      ("memoryBytesSpilled" -> statCounterJson(taskMetricsCounter.memoryBytesSpilled)) ~
+      ("executorDeserializeTime" -> statCounterJson(taskMetricsCounter.executorDeserializeTime)) ~
+      ("jvmGCTime" -> statCounterJson(taskMetricsCounter.jvmGCTime)) ~
+      ("resultSerializationTime" -> statCounterJson(taskMetricsCounter.resultSerializationTime)) ~
+      ("resultSize" -> statCounterJson(taskMetricsCounter.resultSize)) ~
+      ("executorRunTime" -> statCounterJson(taskMetricsCounter.executorRunTime))
+  }
+
+  def statCounterJson(counter: StatCounter): JObject = {
+    ("count" -> counter.count) ~
+      ("min" -> counter.min) ~
+      ("mean" -> counter.mean) ~
+      ("max" -> counter.max) ~
+      ("stdev" -> counter.stdev)
   }
 
   def progressJson(progressTracker: EventProgressTrackerLike) = {

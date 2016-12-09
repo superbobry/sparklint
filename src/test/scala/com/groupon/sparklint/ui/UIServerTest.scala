@@ -46,7 +46,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "return limited information when most of the information are not available" in {
-    pretty(state) shouldBe
+    state shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -69,7 +69,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     forward(4)
 
-    pretty(state) shouldBe
+    state shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -92,7 +92,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     forward(11)
 
-    pretty(state) shouldBe
+    state shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -149,7 +149,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     forward(16)
 
-    pretty(state) shouldBe
+    state shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -301,7 +301,7 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     end
 
-    pretty(state) shouldBe
+    state shouldBe
       """{
         |  "appName" : "MyAppName",
         |  "appId" : "application_1462781278026_205691",
@@ -533,8 +533,634 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
         |}""".stripMargin
   }
 
-  private def state: JValue = {
-    parse(request(stateUrl))
+  it should "return stageMetrics" in {
+    end
+
+    request(stageMetricsUrl) shouldBe
+      """{
+        |  "stageMetrics" : [ {
+        |    "jobGroup" : "myJobGroup",
+        |    "jobDescription" : "myJobDescription",
+        |    "stageName" : "count at <console>:22",
+        |    "stageMetrics" : [ {
+        |      "locality" : "NODE_LOCAL",
+        |      "taskType" : "ResultTask",
+        |      "taskMetrics" : {
+        |        "inputMetrics" : {
+        |          "bytesRead" : {
+        |            "count" : 4,
+        |            "min" : 1.34283264E8,
+        |            "mean" : 1.34283264E8,
+        |            "max" : 1.34283264E8,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 4,
+        |            "min" : 52818.0,
+        |            "mean" : 52865.5,
+        |            "max" : 52913.0,
+        |            "stdev" : 47.5
+        |          }
+        |        },
+        |        "outputMetrics" : {
+        |          "bytesWritten" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsWritten" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleReadMetrics" : {
+        |          "fetchWaitTime" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBlocksFetched" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBytesRead" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBlocksFetched" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBytesRead" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleWriteMetrics" : {
+        |          "shuffleBytesWritten" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleRecordsWritten" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleWriteTime" : {
+        |            "count" : 4,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "diskBytesSpilled" : {
+        |          "count" : 4,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "memoryBytesSpilled" : {
+        |          "count" : 4,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorDeserializeTime" : {
+        |          "count" : 4,
+        |          "min" : 12.0,
+        |          "mean" : 602.0,
+        |          "max" : 1192.0,
+        |          "stdev" : 590.0
+        |        },
+        |        "jvmGCTime" : {
+        |          "count" : 4,
+        |          "min" : 76.0,
+        |          "mean" : 736.0,
+        |          "max" : 1396.0,
+        |          "stdev" : 660.0
+        |        },
+        |        "resultSerializationTime" : {
+        |          "count" : 4,
+        |          "min" : 0.0,
+        |          "mean" : 0.25,
+        |          "max" : 1.0,
+        |          "stdev" : 0.43301270189221935
+        |        },
+        |        "resultSize" : {
+        |          "count" : 4,
+        |          "min" : 2673.0,
+        |          "mean" : 2673.0,
+        |          "max" : 2673.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorRunTime" : {
+        |          "count" : 4,
+        |          "min" : 2016.0,
+        |          "mean" : 2208.25,
+        |          "max" : 2471.0,
+        |          "stdev" : 187.91670362157797
+        |        }
+        |      }
+        |    }, {
+        |      "locality" : "RACK_LOCAL",
+        |      "taskType" : "ResultTask",
+        |      "taskMetrics" : {
+        |        "inputMetrics" : {
+        |          "bytesRead" : {
+        |            "count" : 20,
+        |            "min" : 1.34283264E8,
+        |            "mean" : 1.34283264E8,
+        |            "max" : 1.34283264E8,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 20,
+        |            "min" : 52712.0,
+        |            "mean" : 52886.44999999999,
+        |            "max" : 53130.0,
+        |            "stdev" : 147.6595662326011
+        |          }
+        |        },
+        |        "outputMetrics" : {
+        |          "bytesWritten" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsWritten" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleReadMetrics" : {
+        |          "fetchWaitTime" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBlocksFetched" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBytesRead" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBlocksFetched" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBytesRead" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleWriteMetrics" : {
+        |          "shuffleBytesWritten" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleRecordsWritten" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleWriteTime" : {
+        |            "count" : 20,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "diskBytesSpilled" : {
+        |          "count" : 20,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "memoryBytesSpilled" : {
+        |          "count" : 20,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorDeserializeTime" : {
+        |          "count" : 20,
+        |          "min" : 2.0,
+        |          "mean" : 210.25,
+        |          "max" : 2004.0,
+        |          "stdev" : 598.2315500707062
+        |        },
+        |        "jvmGCTime" : {
+        |          "count" : 20,
+        |          "min" : 0.0,
+        |          "mean" : 932.7,
+        |          "max" : 1478.0,
+        |          "stdev" : 540.9970517479738
+        |        },
+        |        "resultSerializationTime" : {
+        |          "count" : 20,
+        |          "min" : 0.0,
+        |          "mean" : 0.05000000000000001,
+        |          "max" : 1.0,
+        |          "stdev" : 0.21794494717703367
+        |        },
+        |        "resultSize" : {
+        |          "count" : 20,
+        |          "min" : 2673.0,
+        |          "mean" : 2673.0,
+        |          "max" : 2673.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorRunTime" : {
+        |          "count" : 20,
+        |          "min" : 628.0,
+        |          "mean" : 2234.5,
+        |          "max" : 4559.0,
+        |          "stdev" : 1092.3672230527607
+        |        }
+        |      }
+        |    }, {
+        |      "locality" : "ANY",
+        |      "taskType" : "ResultTask",
+        |      "taskMetrics" : {
+        |        "inputMetrics" : {
+        |          "bytesRead" : {
+        |            "count" : 125,
+        |            "min" : 9.9414195E7,
+        |            "mean" : 1.32101313712E8,
+        |            "max" : 1.34283264E8,
+        |            "stdev" : 7862285.908408936
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 125,
+        |            "min" : 39309.0,
+        |            "mean" : 51953.543999999994,
+        |            "max" : 53187.0,
+        |            "stdev" : 3114.7076023382997
+        |          }
+        |        },
+        |        "outputMetrics" : {
+        |          "bytesWritten" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsWritten" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleReadMetrics" : {
+        |          "fetchWaitTime" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBlocksFetched" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBytesRead" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBlocksFetched" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBytesRead" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleWriteMetrics" : {
+        |          "shuffleBytesWritten" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleRecordsWritten" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleWriteTime" : {
+        |            "count" : 125,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "diskBytesSpilled" : {
+        |          "count" : 125,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "memoryBytesSpilled" : {
+        |          "count" : 125,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorDeserializeTime" : {
+        |          "count" : 125,
+        |          "min" : 1.0,
+        |          "mean" : 2.856,
+        |          "max" : 15.0,
+        |          "stdev" : 1.5985193148661043
+        |        },
+        |        "jvmGCTime" : {
+        |          "count" : 125,
+        |          "min" : 0.0,
+        |          "mean" : 874.4319999999999,
+        |          "max" : 12757.0,
+        |          "stdev" : 1266.9430442510036
+        |        },
+        |        "resultSerializationTime" : {
+        |          "count" : 125,
+        |          "min" : 0.0,
+        |          "mean" : 0.055999999999999994,
+        |          "max" : 4.0,
+        |          "stdev" : 0.3858289776572
+        |        },
+        |        "resultSize" : {
+        |          "count" : 125,
+        |          "min" : 2673.0,
+        |          "mean" : 2680.472,
+        |          "max" : 3607.0,
+        |          "stdev" : 83.20467063813184
+        |        },
+        |        "executorRunTime" : {
+        |          "count" : 125,
+        |          "min" : 535.0,
+        |          "mean" : 3528.592,
+        |          "max" : 62736.0,
+        |          "stdev" : 9252.21277930507
+        |        }
+        |      }
+        |    }, {
+        |      "locality" : "PROCESS_LOCAL",
+        |      "taskType" : "ResultTask",
+        |      "taskMetrics" : {
+        |        "inputMetrics" : {
+        |          "bytesRead" : {
+        |            "count" : 55,
+        |            "min" : 1.9423156E8,
+        |            "mean" : 2.555090132363636E8,
+        |            "max" : 2.87470144E8,
+        |            "stdev" : 1.80900482106085E7
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 55,
+        |            "min" : 39309.0,
+        |            "mean" : 52162.163636363635,
+        |            "max" : 53165.0,
+        |            "stdev" : 2767.82697018067
+        |          }
+        |        },
+        |        "outputMetrics" : {
+        |          "bytesWritten" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsWritten" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleReadMetrics" : {
+        |          "fetchWaitTime" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBlocksFetched" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "localBytesRead" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "recordsRead" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBlocksFetched" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "remoteBytesRead" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "shuffleWriteMetrics" : {
+        |          "shuffleBytesWritten" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleRecordsWritten" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          },
+        |          "shuffleWriteTime" : {
+        |            "count" : 55,
+        |            "min" : 0.0,
+        |            "mean" : 0.0,
+        |            "max" : 0.0,
+        |            "stdev" : 0.0
+        |          }
+        |        },
+        |        "diskBytesSpilled" : {
+        |          "count" : 55,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "memoryBytesSpilled" : {
+        |          "count" : 55,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorDeserializeTime" : {
+        |          "count" : 55,
+        |          "min" : 1.0,
+        |          "mean" : 2.9272727272727272,
+        |          "max" : 21.0,
+        |          "stdev" : 4.229139372816973
+        |        },
+        |        "jvmGCTime" : {
+        |          "count" : 55,
+        |          "min" : 0.0,
+        |          "mean" : 0.0,
+        |          "max" : 0.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "resultSerializationTime" : {
+        |          "count" : 55,
+        |          "min" : 0.0,
+        |          "mean" : 0.10909090909090911,
+        |          "max" : 1.0,
+        |          "stdev" : 0.3117532399905863
+        |        },
+        |        "resultSize" : {
+        |          "count" : 55,
+        |          "min" : 2093.0,
+        |          "mean" : 2093.0,
+        |          "max" : 2093.0,
+        |          "stdev" : 0.0
+        |        },
+        |        "executorRunTime" : {
+        |          "count" : 55,
+        |          "min" : 0.0,
+        |          "mean" : 1.5636363636363646,
+        |          "max" : 14.0,
+        |          "stdev" : 3.0556275139702866
+        |        }
+        |      }
+        |    } ]
+        |  } ]
+        |}""".stripMargin
+  }
+
+  private def state: String = {
+    request(stateUrl)
   }
 
   private def forward(count: Int): String = {
@@ -555,6 +1181,10 @@ class UIServerTest extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   private def stateUrl = {
     s"http://localhost:42424/spark_event_log_example/state"
+  }
+
+  private def stageMetricsUrl = {
+    s"http://localhost:42424/spark_event_log_example/stageMetrics"
   }
 
   private def request(url: String): String = {

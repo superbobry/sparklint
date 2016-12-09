@@ -20,11 +20,6 @@ import org.apache.spark.util.StatCounter
 
 trait SparklintTaskCounter {
   def outputMetrics          : SparklintOutputCounter
-
-  /**
-    * DataReadMethod -> SparklintInputMetrics
-    * @return
-    */
   def inputMetrics           : SparklintInputCounter
   def shuffleReadMetrics     : SparklintShuffleReadCounter
   def shuffleWriteMetrics    : SparklintShuffleWriteCounter
