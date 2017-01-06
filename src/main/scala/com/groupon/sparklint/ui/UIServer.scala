@@ -155,6 +155,7 @@ object UIServer {
     val source = report.source
     ("appName" -> source.appName) ~
       ("appId" -> source.appId) ~
+      ("user" -> source.user) ~
       ("allocatedCores" -> report.getExecutorInfo.map(_.values.map(_.cores).sum)) ~
       ("executors" -> report.getExecutorInfo.map(_.map({ case (executorId, info) =>
         ("executorId" -> executorId) ~

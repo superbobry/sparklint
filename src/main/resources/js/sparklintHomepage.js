@@ -81,6 +81,7 @@ function updateEventSourceControl(appId, appState) {
 function updateNameAndId(appState) {
     $("#appName").text(appState.appName || "<unknown>");
     $("#appId").text(appState.appId || "<unknown>");
+    $("#appUser").text("by " + appState.user);
 }
 
 function updateSummaryNumExecutors(appState) {

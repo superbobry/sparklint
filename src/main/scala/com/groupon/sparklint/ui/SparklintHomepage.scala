@@ -134,6 +134,7 @@ class SparklintHomepage(sourceManager: EventSourceManagerLike) extends UITemplat
           <h1 class="page-header">
             <span id="appName">Sparklint</span>
             <small id="appId">Select an app from left side</small>
+            <small id="appUser"></small>
           </h1>
         </div>
         <div class="col-md-12">
